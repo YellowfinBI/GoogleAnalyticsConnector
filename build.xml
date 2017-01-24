@@ -1,0 +1,84 @@
+<?xml version="1.0"?>
+<!-- yf connector build script -->
+<project name="google-analytics" default="build">
+
+  <property name="yf.project.dir" value="${basedir}/../../yf72" />
+  <property name="tomcat7.dir" value="/Users/joynt/apache-tomcat-7.0.59" />
+  <property name="dist.dir" value="${basedir}/dist" />
+
+  <tstamp />
+
+  <target name="build">
+  
+    <echo message="Starting google analytics connector build" />
+
+    <property name="work.dir" value="${basedir}/work" />
+    <property name="jar.name" value="yf-connector-ga-${DSTAMP}.jar" />
+    <property name="connector.name" value="connector-google-analytics-${DSTAMP}.yfp" />
+
+    <delete dir="${work.dir}" />
+    <mkdir dir="${work.dir}" />
+    
+    <mkdir dir="${work.dir}/bin" />
+
+    <fileset id="dependencies" dir="${basedir}/../common/lib">
+      <include name="commons-httpclient-3.0.jar" />
+      <include name="google-api-client-1.19.0.jar" />
+      <include name="google-api-services-analytics-v3-rev98-1.19.0.jar" />
+      <include name="google-api-services-youtube-v3-rev150-1.20.0.jar" />
+      <include name="google-api-services-youtubeAnalytics-v1-rev53-1.20.0.jar" />
+      <include name="google-api-services-youtubereporting-v1-rev1-1.20.0.jar" />
+      <include name="google-http-client-1.19.0.jar" />
+      <include name="google-http-client-jackson2-1.19.0.jar" />
+      <include name="google-oauth-client-1.19.0.jar" />
+      <include name="google-oauth-client-java6-1.19.0.jar" />
+      <include name="google-oauth-client-jetty-1.19.0.jar" />
+      <include name="jackson-core-2.1.3.jar" />
+      <include name="json.jar" />
+      <include name="log4j-1.2.17.jar" />
+      <include name="scribe-1.3.7.jar" />
+    </fileset>
+
+    <path id="compile-path">
+      <pathelement path="${yf.project.dir}/WEB-INF/classes" />
+      <fileset refid="dependencies" />
+      <fileset dir="${tomcat7.dir}/lib">
+        <include name="jsp-api.jar" />
+        <include name="servlet-api.jar" />
+      </fileset>
+    </path>
+
+    <javac source="1.6"
+      target="1.6"
+      srcdir="${basedir}/src"
+      destdir="${work.dir}/bin"
+      debug="on"
+      classpathref="compile-path"
+      fork="yes"
+      memorymaximumsize="512M"
+      nowarn="true" />
+   
+    <jar basedir="${work.dir}/bin" jarfile="${work.dir}/${jar.name}">
+      <manifest>
+        <attribute name="Implementation-Title" value="Yellowfin Google Analytics Connector" />
+        <attribute name="Implementation-Vendor" value="Yellowfin" />
+        <attribute name="Implementation-Version" value="${DSTAMP}" />
+        <attribute name="Yellowfin-Library-Version" value="${DSTAMP}" />
+      </manifest>
+    </jar>
+
+    <mkdir dir="${dist.dir}" />
+    <delete file="${dist.dir}/${connector.name}" />
+
+    <zip destfile="${dist.dir}/${connector.name}">
+      <fileset dir="${work.dir}" includes="${jar.name}" />
+      <fileset refid="dependencies" />
+      <fileset dir="${basedir}/resources" />
+    </zip>
+
+    <echo message="Finished google analytics connector build" />
+
+  </target>
+
+</project>
+
