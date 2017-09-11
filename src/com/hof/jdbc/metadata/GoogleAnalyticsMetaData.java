@@ -36,12 +36,12 @@ import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.client.util.store.DataStoreFactory;
 import com.google.api.services.analytics.Analytics;
 import com.google.api.services.analytics.model.Profile;
-import com.google.api.services.analyticsreporting.v4.*;
 import com.hof.data.SessionBean;
 import com.hof.mi.data.ReportImageItemBean;
 import com.hof.mi.interfaces.UserInputParameters.Parameter;
 import com.hof.pool.DBType;
 import com.hof.pool.JDBCMetaData;
+import com.google.api.services.analytics.AnalyticsScopes;
 
 public class GoogleAnalyticsMetaData extends JDBCMetaData {
 
@@ -195,7 +195,7 @@ public class GoogleAnalyticsMetaData extends JDBCMetaData {
 			setParameterValue("REFRESH_TOKEN", resp.getRefreshToken());
 			
 			Collection<String> scopes=new ArrayList<String>();
-			scopes.add(AnalyticsReportingScopes.ANALYTICS_READONLY);
+			scopes.add(AnalyticsScopes.ANALYTICS_READONLY);
 			
 			GoogleCredential credential2 = new GoogleCredential.Builder()
 			.setTransport(HTTP_TRANSPORT)
