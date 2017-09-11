@@ -2,6 +2,8 @@ package com.hof.imp;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.net.InetSocketAddress;
+import java.net.Proxy;
 import java.sql.Date;
 import java.text.DateFormat;
 import java.text.ParseException;
@@ -10,14 +12,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.log4j.Logger;
 
 import org.json.*;
-
-
-
 
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
@@ -34,9 +32,9 @@ import com.google.api.services.analytics.model.Columns;
 import com.google.api.services.analytics.model.GaData;
 import com.google.api.services.analytics.model.GaData.ColumnHeaders;
 import com.google.api.services.analytics.model.Profile;
-
+import com.google.api.services.analytics.model.Profiles;
+import com.hof.data.SessionBean;
 import com.hof.jdbc.metadata.GoogleAnalyticsMetaData;
-
 import com.hof.mi.thirdparty.interfaces.AbstractDataSet;
 import com.hof.mi.thirdparty.interfaces.AbstractDataSource;
 import com.hof.mi.thirdparty.interfaces.ColumnMetaData;
@@ -48,9 +46,11 @@ import com.hof.mi.thirdparty.interfaces.ScheduleDefinition;
 import com.hof.mi.thirdparty.interfaces.ScheduleDefinition.FrequencyTypeCode;
 import com.hof.mi.thirdparty.interfaces.ThirdPartyException;
 import com.hof.pool.JDBCMetaData;
+import com.hof.util.Const;
 import com.hof.util.GoogleAnalyticsDataZoom;
-
+import com.hof.util.OrgCache;
 import com.hof.util.UtilString;
+import com.hof.util.i4RequestRegistry;
 
 public class GoogleAnalytics extends AbstractDataSource {
 
@@ -62,8 +62,8 @@ public class GoogleAnalytics extends AbstractDataSource {
 	private IOException error = null;
 	private int rowsLimit=10000;
 	
-	private static final HttpTransport HTTP_TRANSPORT = new NetHttpTransport();
-	private static final JsonFactory JSON_FACTORY = new JacksonFactory();
+	private static HttpTransport HTTP_TRANSPORT = new NetHttpTransport();
+	private static JsonFactory JSON_FACTORY = new JacksonFactory();
 	
 	private JDBCMetaData sourceMetadata = null;
 	private final static Logger log = Logger.getLogger(GoogleAnalytics.class);
@@ -1621,6 +1621,30 @@ public class GoogleAnalytics extends AbstractDataSource {
 	private Analytics getAnalytics(){
 		//if (analytics != null) return analytics;
 		
+		String pAddr=null;;
+        String pPort=null;
+        OrgCache oc;
+		try {
+			oc = OrgCache.getInstance();
+		
+		Integer ipOrg = Const.UNO;
+		SessionBean sb = i4RequestRegistry.getInstance().getCurrentSessionBean();
+		if (sb != null) ipOrg = sb.getPersonSearchIpOrg();
+		pAddr = oc.getOrgParm(ipOrg, Const.C_OUTGOINGPROXYSERVER);
+		pPort = oc.getOrgParm(ipOrg, Const.C_OUTGOINGPROXYPORT);
+		
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		if (pAddr!=null && pPort!=null)
+		{
+			Proxy p = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(pAddr, Integer.valueOf(pPort)));
+        	HTTP_TRANSPORT = new NetHttpTransport.Builder()
+        			.setProxy(p)
+        			.build();
+		}
+		
 		analytics = new Analytics.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredential())
 									.setApplicationName("Yellowfin")
 									.build();
@@ -1644,6 +1668,30 @@ public class GoogleAnalytics extends AbstractDataSource {
 		HashMap<String, Object> res=new HashMap<String, Object>();
 		try
 		{
+			
+			String pAddr=null;;
+	        String pPort=null;
+	        OrgCache oc;
+			try {
+				oc = OrgCache.getInstance();
+			
+    		Integer ipOrg = Const.UNO;
+    		SessionBean sb = i4RequestRegistry.getInstance().getCurrentSessionBean();
+			if (sb != null) ipOrg = sb.getPersonSearchIpOrg();
+    		pAddr = oc.getOrgParm(ipOrg, Const.C_OUTGOINGPROXYSERVER);
+			pPort = oc.getOrgParm(ipOrg, Const.C_OUTGOINGPROXYPORT);
+			
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			if (pAddr!=null && pPort!=null)
+			{
+				Proxy p = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(pAddr, Integer.valueOf(pPort)));
+	        	HTTP_TRANSPORT = new NetHttpTransport.Builder()
+	        			.setProxy(p)
+	        			.build();
+			}
 			GoogleCredential credential = new GoogleCredential.Builder()
 			.setTransport(HTTP_TRANSPORT)
 			.setJsonFactory(JSON_FACTORY)
@@ -1692,6 +1740,7 @@ public class GoogleAnalytics extends AbstractDataSource {
 	
 	public boolean autoRun()
 	{
+		cacheAllColumns();
 		if (loadBlob("LASTRUN")!=null)
 		{
 			java.util.Date curDt=new java.util.Date();
@@ -1701,7 +1750,30 @@ public class GoogleAnalytics extends AbstractDataSource {
 			
 			if (minsDiff>=50)
 			{
+				String pAddr=null;;
+		        String pPort=null;
+		        OrgCache oc;
+				try {
+					oc = OrgCache.getInstance();
 				
+	    		Integer ipOrg = Const.UNO;
+	    		SessionBean sb = i4RequestRegistry.getInstance().getCurrentSessionBean();
+				if (sb != null) ipOrg = sb.getPersonSearchIpOrg();
+	    		pAddr = oc.getOrgParm(ipOrg, Const.C_OUTGOINGPROXYSERVER);
+				pPort = oc.getOrgParm(ipOrg, Const.C_OUTGOINGPROXYPORT);
+				
+				} catch (Exception e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				if (pAddr!=null && pPort!=null)
+				{
+					Proxy p = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(pAddr, Integer.valueOf(pPort)));
+		        	HTTP_TRANSPORT = new NetHttpTransport.Builder()
+		        			.setProxy(p)
+		        			.build();
+		        	
+				}
 				try {
 					GoogleCredential cr;
 					if(loadBlob("ACCESS_TOKEN")!=null && loadBlob("REFRESH_TOKEN")!=null)
@@ -1737,7 +1809,7 @@ public class GoogleAnalytics extends AbstractDataSource {
 						return false;
 					}
 					
-					cacheAllColumns();
+					
 					
 					
 				} 
@@ -1794,20 +1866,64 @@ public class GoogleAnalytics extends AbstractDataSource {
 		try 
 		{
 			List<Column> cols=getAnalytics().metadata().columns().list("ga").execute().getItems();
+			
+			int numberOfGoals = 0;
+			
+			
+			Profiles pfls = getAnalytics().management().profiles().list("~all", "~all").execute();
+			String accountId = null;
+			String webPropertyId = null;
+			String profileId = (String) getAttribute("PROFILEID");
+			
+			for (Profile p:pfls.getItems()) 
+			{
+				if(p.getId().equals((String) getAttribute("PROFILEID")))
+				{
+					accountId = p.getAccountId();
+					webPropertyId = p.getWebPropertyId();
+				}
+			}
+			
+			if (accountId != null && webPropertyId != null)
+			{
+				com.google.api.services.analytics.model.Goals goals = getAnalytics().management().goals().list(accountId, webPropertyId, profileId).execute();
+				numberOfGoals = goals.getItems().size();	
+			}
+			
+			
 			String colstoSave="[";
 			for ( Column col:cols)
 			{
 				JSONObject column=new JSONObject();
 				
-				column.put("uiName", col.getAttributes().get("uiName"));
-				column.put("status", col.getAttributes().get("status"));
-				column.put("dataType", col.getAttributes().get("dataType"));
-				column.put("type", col.getAttributes().get("type"));
-				column.put("id", col.getId());
+				if (col.getAttributes().get("uiName").contains("Goal XX ") && numberOfGoals > 0)
+				{
+					int c;
+					for (c=1; c<=numberOfGoals; c++)
+					{
+						String uiName=col.getAttributes().get("uiName").replace("XX", String.valueOf(c));
+						String id= col.getId().replace("XX", String.valueOf(c));
+						column.put("uiName", uiName);
+						column.put("status", col.getAttributes().get("status"));
+						column.put("dataType", col.getAttributes().get("dataType"));
+						column.put("type", col.getAttributes().get("type"));
+						column.put("id", id);
+						colstoSave=colstoSave+column+", ";
+					}
+				}
+				else 
+				{
+					column.put("uiName", col.getAttributes().get("uiName"));
+					column.put("status", col.getAttributes().get("status"));
+					column.put("dataType", col.getAttributes().get("dataType"));
+					column.put("type", col.getAttributes().get("type"));
+					column.put("id", col.getId());
+					colstoSave=colstoSave+column+", ";
+				}			
 				
 				
-				colstoSave=colstoSave+column+", ";
 			}	
+			
 			colstoSave=colstoSave+"]";
 			
 			saveBlob("ALLCOLUMNSMETADATA", colstoSave.getBytes());

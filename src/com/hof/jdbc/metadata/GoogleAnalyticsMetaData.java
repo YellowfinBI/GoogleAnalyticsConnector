@@ -1,8 +1,13 @@
 package com.hof.jdbc.metadata;
 
+import com.hof.util.Const;
 import com.hof.util.GoogleAnalyticsDataZoom;
+import com.hof.util.OrgCache;
+import com.hof.util.i4RequestRegistry;
 
 import java.io.File;
+import java.net.InetSocketAddress;
+import java.net.Proxy;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -30,8 +35,9 @@ import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.client.util.store.DataStoreFactory;
 import com.google.api.services.analytics.Analytics;
-import com.google.api.services.analytics.AnalyticsScopes;
 import com.google.api.services.analytics.model.Profile;
+import com.google.api.services.analyticsreporting.v4.*;
+import com.hof.data.SessionBean;
 import com.hof.mi.data.ReportImageItemBean;
 import com.hof.mi.interfaces.UserInputParameters.Parameter;
 import com.hof.pool.DBType;
@@ -146,13 +152,50 @@ public class GoogleAnalyticsMetaData extends JDBCMetaData {
         if (buttonName.equals("POSTPIN") && getParameterValue("PIN")!=null)
         {
         	String ver=(String)getParameterValue("PIN");
+        	
+        	String pAddr=null;;
+	        String pPort=null;
+	        OrgCache oc;
+			try {
+				oc = OrgCache.getInstance();
+			
+    		Integer ipOrg = Const.UNO;
+    		SessionBean sb = i4RequestRegistry.getInstance().getCurrentSessionBean();
+			if (sb != null) ipOrg = sb.getPersonSearchIpOrg();
+    		pAddr = oc.getOrgParm(ipOrg, Const.C_OUTGOINGPROXYSERVER);
+			pPort = oc.getOrgParm(ipOrg, Const.C_OUTGOINGPROXYPORT);
+			
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			if (pAddr!=null && pPort!=null)
+			{
+				Proxy p = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(pAddr, Integer.valueOf(pPort)));
+	        	HTTP_TRANSPORT = new NetHttpTransport.Builder()
+	        			.setProxy(p)
+	        			.build();
+	        	
+	        	flow = new AuthorizationCodeFlow.Builder(BearerToken
+	      		      .authorizationHeaderAccessMethod(),
+	      		      HTTP_TRANSPORT,
+	      		      JSON_FACTORY,
+	      		      new GenericUrl(TOKEN_SERVER_URL),
+	      		      new ClientParametersAuthentication(
+	      		    		  new String(com.hof.util.Base64.decode(GoogleAnalyticsDataZoom.getData())), new String(com.hof.util.Base64.decode(GoogleAnalyticsDataZoom.getZoom()))),
+	      		    		  new String(com.hof.util.Base64.decode(GoogleAnalyticsDataZoom.getData())),
+	      		      AUTHORIZATION_SERVER_URL).setScopes(Arrays.asList(SCOPE))
+	      		      .build();
+			}
+        	
+        	
         	TokenResponse resp=flow.newTokenRequest(ver).setRedirectUri("urn:ietf:wg:oauth:2.0:oob").execute();
 			
         	setParameterValue("ACCESS_TOKEN", resp.getAccessToken());
 			setParameterValue("REFRESH_TOKEN", resp.getRefreshToken());
 			
 			Collection<String> scopes=new ArrayList<String>();
-			scopes.add(AnalyticsScopes.ANALYTICS_READONLY);
+			scopes.add(AnalyticsReportingScopes.ANALYTICS_READONLY);
 			
 			GoogleCredential credential2 = new GoogleCredential.Builder()
 			.setTransport(HTTP_TRANSPORT)
@@ -162,7 +205,7 @@ public class GoogleAnalyticsMetaData extends JDBCMetaData {
 			.setAccessToken((String)getParameterValue("ACCESS_TOKEN"))
 			.setRefreshToken((String)getParameterValue("REFRESH_TOKEN"));
 			
-			Analytics a = new com.google.api.services.analytics.Analytics.Builder(HTTP_TRANSPORT, JSON_FACTORY, credential2)
+			Analytics a = new Analytics.Builder(HTTP_TRANSPORT, JSON_FACTORY, credential2)
 			.setApplicationName("Yellowfin")
 			.build();
 			
