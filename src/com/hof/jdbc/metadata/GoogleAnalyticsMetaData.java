@@ -99,6 +99,9 @@ public class GoogleAnalyticsMetaData extends JDBCMetaData {
 		
 		addParameter(new Parameter("HELP", GoogleAnalyticsDataZoom.getText("Connection Instructions", "mi.text.ga.connection.instructions.label"),  inst, TYPE_NUMERIC, DISPLAY_STATIC_TEXT, null, true));
         
+		Parameter useForETL=new Parameter("USEFORTRANSFORMATIONS", "Use for Transformations",  "Use this data source for transformations", TYPE_TEXT, DISPLAY_CHECKBOX, false, true);
+        addParameter(useForETL);
+		
         Parameter p = new Parameter("URL", GoogleAnalyticsDataZoom.getText("1. Request Access PIN", "mi.text.ga.connection.request.pin.button.label"), GoogleAnalyticsDataZoom.getText("Connect to Google Analytics to receive a PIN for data access", "mi.text.ga.connection.request.pin.button.description"),TYPE_UNKNOWN, DISPLAY_URLBUTTON,  null, true);
         p.addOption("BUTTONTEXT", GoogleAnalyticsDataZoom.getText("Authorize Google Analytics", "mi.text.ga.connection.request.pin.button.text"));
         p.addOption("BUTTONURL", url);

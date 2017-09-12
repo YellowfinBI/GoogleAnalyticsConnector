@@ -925,6 +925,15 @@ public class GoogleAnalytics extends AbstractDataSource {
 			
 			@Override
 			public List<FilterMetaData> getFilters() {
+				
+				Boolean isTransformations = Boolean.valueOf((String)getAttribute("USEFORTRANSFORMATIONS"));
+				List<String> fieldsAllowed = new ArrayList<String>();
+				
+				if (isTransformations)
+				{
+					fieldsAllowed = fieldsAllowed();
+				}
+				
 				// TODO Auto-generated method stub
 				ArrayList<FilterMetaData> fm = new ArrayList<FilterMetaData>();
 				
@@ -989,16 +998,25 @@ public class GoogleAnalytics extends AbstractDataSource {
 								dt=DataType.DATE;
 							}
 							
-							
-							if (col.getAttributes().get("type").equals("METRIC"))
+							boolean addFilter =false;
+							if ((isTransformations && fieldsAllowed.contains(YellowfinName)) || !isTransformations)
 							{
-								fm.add(new FilterMetaData(YellowfinName, dt, false, new FilterOperator[] {FilterOperator.EQUAL, FilterOperator.NOTEQUAL, FilterOperator.GREATER, FilterOperator.LESS, FilterOperator.GREATEREQUAL, FilterOperator.LESSEQUAL, FilterOperator.INLIST}));
+								addFilter = true;
 							}
 							
-							else if (col.getAttributes().get("type").equals("DIMENSION"))
+							if (addFilter)
 							{
-								fm.add(new FilterMetaData(YellowfinName, dt, false, new FilterOperator[] {FilterOperator.EQUAL, FilterOperator.NOTEQUAL, FilterOperator.CONTAINS, FilterOperator.NOTCONTAINS, FilterOperator.INLIST}));
+								if (col.getAttributes().get("type").equals("METRIC"))
+								{
+									fm.add(new FilterMetaData(YellowfinName, dt, false, new FilterOperator[] {FilterOperator.EQUAL, FilterOperator.NOTEQUAL, FilterOperator.GREATER, FilterOperator.LESS, FilterOperator.GREATEREQUAL, FilterOperator.LESSEQUAL, FilterOperator.INLIST}));
+								}
+								
+								else if (col.getAttributes().get("type").equals("DIMENSION"))
+								{
+									fm.add(new FilterMetaData(YellowfinName, dt, false, new FilterOperator[] {FilterOperator.EQUAL, FilterOperator.NOTEQUAL, FilterOperator.CONTAINS, FilterOperator.NOTCONTAINS, FilterOperator.INLIST}));
+								}
 							}
+							
 						}
 						
 					}
@@ -1020,6 +1038,13 @@ public class GoogleAnalytics extends AbstractDataSource {
 			@Override
 			public List<ColumnMetaData> getColumns() {
 				
+				Boolean isTransformations = Boolean.valueOf((String)getAttribute("USEFORTRANSFORMATIONS"));
+				List<String> fieldsAllowed = new ArrayList<String>();
+				
+				if (isTransformations)
+				{
+					fieldsAllowed = fieldsAllowed();
+				}
 				ArrayList<Column> cols=getAllColumnsMetadata();
 					
 					ArrayList<ColumnMetaData> columns = new ArrayList<ColumnMetaData>();
@@ -1077,7 +1102,17 @@ public class GoogleAnalytics extends AbstractDataSource {
 								dt=DataType.DATE;
 							}
 							
-							columns.add(new ColumnMetaData(YellowfinName, dt));
+							
+							boolean addField =false;
+							if ((isTransformations && fieldsAllowed.contains(YellowfinName)) || !isTransformations)
+							{
+								addField = true;
+							}
+							
+							if (addField)
+							{
+								columns.add(new ColumnMetaData(YellowfinName, dt));
+							}
 						}
 						
 					}
@@ -1249,73 +1284,58 @@ public class GoogleAnalytics extends AbstractDataSource {
 					//if (filterCount > 0) get.setFilters(filtersStr.toString());
 					get.setDimensions(dimensString);
 					//System.out.println("");
-					GaData result=get.execute();
 					
 					
-					if (result.getRows()==null || result.getRows().size()<1)
+					GaData result = null;
+					Boolean isTransformation = Boolean.valueOf((String)getAttribute("USEFORTRANSFORMATIONS"));
+					if(isTransformation)
 					{
-						return null;
+						List<GaData> results = new ArrayList<GaData>();
+						result=get.execute();
+						int totalSize = 0;
+						if (result.getRows()!=null && result.getRows().size()>0)
+						{
+							boolean stop = false;
+							results.add(result);
+							totalSize = totalSize + result.getRows().size();
+							int c=1;
+							get.setStartIndex(rowsLimit+1);
+							if (result.size()<rowsLimit)
+							{
+								stop = true;
+							}
+							
+							while(!stop)
+							{
+								result = get.execute();
+								if (result!=null && result.getRows().size()>0)
+								{
+									results.add(result);			
+									c++;
+									get.setStartIndex(c*rowsLimit+1);
+								}
+								else
+								{
+									stop=true;
+								}
+								
+							}
+						}
+					}
+					else
+					{
+						List<GaData> results = new ArrayList<GaData>();
+						result=get.execute();
+						
+						if (result.getRows()==null && result.getRows().size()>0)
+						{
+							
+						}
+						
 					}
 					
 					Object[][] data=new Object[result.getRows().size()][result.getColumnHeaders().size()];
-					List<ColumnHeaders> colsRes = result.getColumnHeaders();
-					int counter=0;
-					for (ColumnHeaders col:colsRes)
-					{
-						String name="";
-						for (String colName:metricsHash.keySet())
-						{
-							if (colName.equals(col.getName()))
-								name=metricsHash.get(colName);
-						}
-						
-						for (String colName:dimensionsHash.keySet())
-						{
-							if (colName.equals(col.getName()))
-								name=dimensionsHash.get(colName);
-						}
-						
-						for (i=0; i<columns.size(); i++)
-						{
-							if (columns.get(i).getColumnName().equals(name))
-							{
-								int k;
-								if (columns.get(i).getColumnType().equals(DataType.TEXT))
-								{
-									for (k=0; k<result.getRows().size(); k++)
-										data[k][i]=String.valueOf(result.getRows().get(k).get(counter));
-								}
-								
-								else if (columns.get(i).getColumnType().equals(DataType.DATE))
-								{
-									for (k=0; k<result.getRows().size(); k++)
-									{
-										String Dt=result.getRows().get(k).get(counter).substring(0, 4)+"-"+result.getRows().get(k).get(counter).substring(4, 6)+"-"+result.getRows().get(k).get(counter).substring(6, 8);
-										java.sql.Date dt=java.sql.Date.valueOf(Dt);
-										data[k][i]=dt;
-									}
-								}
-								
-								else if (columns.get(i).getColumnType().equals(DataType.INTEGER))
-								{
-									for (k=0; k<result.getRows().size(); k++)
-									{
-										data[k][i]=Integer.valueOf(result.getRows().get(k).get(counter));
-									}
-								}
-								
-								else if (columns.get(i).getColumnType().equals(DataType.NUMERIC))
-								{
-									for (k=0; k<result.getRows().size(); k++)
-									{
-										data[k][i]=Double.valueOf(result.getRows().get(k).get(counter));
-									}
-								}
-							}
-						}
-						
-						counter=counter+1;
-					}
+					
 					
 					return data;
 					//data=buildResultset(result, columns);
@@ -1334,7 +1354,96 @@ public class GoogleAnalytics extends AbstractDataSource {
 				
 				
 			}
+			
+			private Object[][] parseData(GaData result
+					, HashMap<String, String> metricsHash
+					, HashMap<String, String> dimensionsHash
+					, List<ColumnMetaData> columns)
+			{
+				int i;
+				Object[][] data=new Object[result.getRows().size()][result.getColumnHeaders().size()];
+				List<ColumnHeaders> colsRes = result.getColumnHeaders();
+				int counter=0;
+				for (ColumnHeaders col:colsRes)
+				{
+					String name="";
+					for (String colName:metricsHash.keySet())
+					{
+						if (colName.equals(col.getName()))
+							name=metricsHash.get(colName);
+					}
+					
+					for (String colName:dimensionsHash.keySet())
+					{
+						if (colName.equals(col.getName()))
+							name=dimensionsHash.get(colName);
+					}
+					
+					for (i=0; i<columns.size(); i++)
+					{
+						if (columns.get(i).getColumnName().equals(name))
+						{
+							int k;
+							if (columns.get(i).getColumnType().equals(DataType.TEXT))
+							{
+								for (k=0; k<result.getRows().size(); k++)
+									data[k][i]=String.valueOf(result.getRows().get(k).get(counter));
+							}
+							
+							else if (columns.get(i).getColumnType().equals(DataType.DATE))
+							{
+								for (k=0; k<result.getRows().size(); k++)
+								{
+									String Dt=result.getRows().get(k).get(counter).substring(0, 4)+"-"+result.getRows().get(k).get(counter).substring(4, 6)+"-"+result.getRows().get(k).get(counter).substring(6, 8);
+									java.sql.Date dt=java.sql.Date.valueOf(Dt);
+									data[k][i]=dt;
+								}
+							}
+							
+							else if (columns.get(i).getColumnType().equals(DataType.INTEGER))
+							{
+								for (k=0; k<result.getRows().size(); k++)
+								{
+									data[k][i]=Integer.valueOf(result.getRows().get(k).get(counter));
+								}
+							}
+							
+							else if (columns.get(i).getColumnType().equals(DataType.NUMERIC))
+							{
+								for (k=0; k<result.getRows().size(); k++)
+								{
+									data[k][i]=Double.valueOf(result.getRows().get(k).get(counter));
+								}
+							}
+						}
+					}
+					
+					counter=counter+1;
+				}
+				
+				return data;
+			}
 
+			private List<String> fieldsAllowed()
+			{
+				List<String> fieldsAllowed = new ArrayList<String>();
+				
+				fieldsAllowed.add("Country");
+				fieldsAllowed.add("City");
+				fieldsAllowed.add("Browser");
+				fieldsAllowed.add("Referral Source");
+				fieldsAllowed.add("Page");
+				fieldsAllowed.add("Browser");
+				fieldsAllowed.add("Visits");
+				fieldsAllowed.add("Pages per Visit");
+				fieldsAllowed.add("Sessions");
+				fieldsAllowed.add("Bounce Rate");
+				fieldsAllowed.add("New Visits");
+				fieldsAllowed.add("Visits");
+				fieldsAllowed.add("Unique Visitors");
+				
+				return fieldsAllowed;
+			}
 			private String compileFilters(List<FilterData> filters, HashMap<String, String> metricsHash, HashMap<String, String> dimensionsHash) 
 			{
 				// TODO Auto-generated method stub
