@@ -5,7 +5,6 @@ import com.hof.util.GoogleAnalyticsDataZoom;
 import com.hof.util.OrgCache;
 import com.hof.util.i4RequestRegistry;
 
-import java.io.File;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.util.ArrayList;
@@ -13,16 +12,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
-import org.scribe.builder.ServiceBuilder;
-import org.scribe.model.OAuthRequest;
-import org.scribe.model.Response;
 import org.scribe.model.Token;
-import org.scribe.model.Verb;
-import org.scribe.model.Verifier;
-import org.scribe.oauth.OAuthService;
-
 import com.google.api.client.auth.oauth2.AuthorizationCodeFlow;
 import com.google.api.client.auth.oauth2.BearerToken;
 import com.google.api.client.auth.oauth2.ClientParametersAuthentication;
@@ -33,12 +23,9 @@ import com.google.api.client.http.HttpTransport;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.jackson2.JacksonFactory;
-import com.google.api.client.util.store.DataStoreFactory;
 import com.google.api.services.analytics.Analytics;
 import com.google.api.services.analytics.model.Profile;
 import com.hof.data.SessionBean;
-import com.hof.mi.data.ReportImageItemBean;
-import com.hof.mi.interfaces.UserInputParameters.Parameter;
 import com.hof.pool.DBType;
 import com.hof.pool.JDBCMetaData;
 import com.google.api.services.analytics.AnalyticsScopes;
@@ -99,7 +86,7 @@ public class GoogleAnalyticsMetaData extends JDBCMetaData {
 		
 		addParameter(new Parameter("HELP", GoogleAnalyticsDataZoom.getText("Connection Instructions", "mi.text.ga.connection.instructions.label"),  inst, TYPE_NUMERIC, DISPLAY_STATIC_TEXT, null, true));
         
-		Parameter useForETL=new Parameter("USEFORTRANSFORMATIONS", "Use for Transformations",  "Use this data source for transformations", TYPE_TEXT, DISPLAY_CHECKBOX, false, true);
+		Parameter useForETL=new Parameter("USEFORTRANSFORMATIONS", GoogleAnalyticsDataZoom.getText("Use for Transformations", "mi.text.thirdparty.connection.usefortransformations.label"),  GoogleAnalyticsDataZoom.getText("Use this data source for transformations", "mi.text.thirdparty.connection.usefortransformations.description"), TYPE_TEXT, DISPLAY_CHECKBOX, false, true);
         addParameter(useForETL);
 		
         Parameter p = new Parameter("URL", GoogleAnalyticsDataZoom.getText("1. Request Access PIN", "mi.text.ga.connection.request.pin.button.label"), GoogleAnalyticsDataZoom.getText("Connect to Google Analytics to receive a PIN for data access", "mi.text.ga.connection.request.pin.button.description"),TYPE_UNKNOWN, DISPLAY_URLBUTTON,  null, true);
@@ -115,39 +102,7 @@ public class GoogleAnalyticsMetaData extends JDBCMetaData {
 		addParameter(new Parameter("REFRESH_TOKEN", GoogleAnalyticsDataZoom.getText("Refresh Token", "mi.text.ga.connection.refresh.token.field.label"), GoogleAnalyticsDataZoom.getText("Refresh Token", "mi.text.ga.connection.refresh.token.field.description"),TYPE_TEXT, DISPLAY_PASSWORD,  null, true));
 		addParameter(new Parameter("WEBSITE", GoogleAnalyticsDataZoom.getText("Website", "mi.text.ga.connection.website.field.label"), GoogleAnalyticsDataZoom.getText("Website", "mi.text.ga.connection.website.field.description"),TYPE_TEXT, DISPLAY_TEXT_LONG,  null, true));
 		addParameter(new Parameter("PROFILEID", GoogleAnalyticsDataZoom.getText("Profile ID", "mi.text.ga.connection.profileid.field.label"), GoogleAnalyticsDataZoom.getText("Profile ID", "mi.text.ga.connection.profileid.field.description"),TYPE_TEXT, DISPLAY_TEXT_LONG,  null, true));
-		//addParameter(new Parameter("WEB", GoogleAnalyticsDataZoom.getText("Web", "mi.text.ga.connection.website.field.labelll"), GoogleAnalyticsDataZoom.getText("Website", "mi.text.ga.connection.website.field.description"),TYPE_TEXT, DISPLAY_SELECT,  null, true));
-		
-		/*List<Object[]> opt=getParameter("WEBSITE").getOptions();
-		if (!Ws.isEmpty())
-		{
-			if (getParameter("WEB")==null)
-			{
-				Parameter select = new Parameter("WEB", "WEB" ,  "Sites", TYPE_TEXT, DISPLAY_SELECT, null, true);
 				
-				for (String val:Ws)
-				{
-					Object[] check=new Object[2];
-					check[0]=val;
-					check[1]=val;
-					if (!getParameter("WEB").getOptions().contains(check))
-						select.addOption(val, val);
-				}
-				
-				addParameter(select);
-				
-				//Ws.clear();
-				
-			}
-			
-		}*/
-		
-		
-		
-		/*while (((String)getParameterValue("ACCESS_TOKEN")).equals(""))
-		{
-			
-		}*/
-		
 	}
 	
 	public String buttonPressed(String buttonName) throws Exception 
@@ -231,43 +186,10 @@ public class GoogleAnalyticsMetaData extends JDBCMetaData {
 		        	
 	        	}
 	        }
-			/*for (Profile p:pfls.getItems())
-			{
-				IDs=IDs+p.getId()+", ";
-				Websites=Websites+p.getName()+", ";
-			}*/
-			
-			/*if (Ws.isEmpty())
-			{
-				for (Profile p:pfls.getItems())
-				{
-					if (!Ws.contains(p.getName()))
-						Ws.add(p.getName());
-				}
-			}*/
 			
 			setParameterValue("PROFILEID", IDs);
 			setParameterValue("WEBSITE", Websites);
-			
-			/*Parameter pp=getParameter("WEB");
-			for (String val:Ws) {
-				pp.addOption(val, val);
-			}*/
-			//setSelect=true;
-
-    		/*JSONObject companiesObj=new JSONObject(response.getBody());
-    		JSONArray companies=new JSONArray();
-    		if (companiesObj.has("values"))
-    		{
-    			companies=companiesObj.getJSONArray("values");
-    		}
-    		
-    		if (companies.length()>0)
-    		{
-    			setParameterValue("COMPANY", companies.getJSONObject(0).getString("name"));
-    		}*/
-    		
-    		
+			    		
         }      
         return null;
         
