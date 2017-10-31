@@ -88,10 +88,19 @@ public class GoogleAnalytics extends AbstractDataSource {
 			@Override
 			public List<FilterMetaData> getFilters() {
 				
-				Boolean isTransformations = Boolean.valueOf((String)getAttribute("USEFORTRANSFORMATIONS"));
+				boolean isETLContext = false;
+				
+				try {
+
+					isETLContext = isTransformationContext();
+
+				} catch (NoSuchMethodError e) {
+
+
+				}
 				List<String> fieldsAllowed = new ArrayList<String>();
 				
-				if (isTransformations)
+				if (isETLContext)
 				{
 					fieldsAllowed = fieldsAllowed();
 				}
@@ -161,7 +170,7 @@ public class GoogleAnalytics extends AbstractDataSource {
 							}
 							
 							boolean addFilter =false;
-							if ((isTransformations && fieldsAllowed.contains(YellowfinName)) || !isTransformations)
+							if ((isETLContext && fieldsAllowed.contains(YellowfinName)) || !isETLContext)
 							{
 								addFilter = true;
 							}
@@ -200,10 +209,20 @@ public class GoogleAnalytics extends AbstractDataSource {
 			@Override
 			public List<ColumnMetaData> getColumns() {
 				
-				Boolean isTransformations = Boolean.valueOf((String)getAttribute("USEFORTRANSFORMATIONS"));
+				boolean isETLContext = false;
+				
+				try {
+
+					isETLContext = isTransformationContext();
+
+				} catch (NoSuchMethodError e) {
+
+
+				}
+				
 				List<String> fieldsAllowed = new ArrayList<String>();
 				
-				if (isTransformations)
+				if (isETLContext)
 				{
 					fieldsAllowed = fieldsAllowed();
 				}
@@ -266,7 +285,7 @@ public class GoogleAnalytics extends AbstractDataSource {
 							
 							
 							boolean addField =false;
-							if ((isTransformations && fieldsAllowed.contains(YellowfinName)) || !isTransformations)
+							if ((isETLContext && fieldsAllowed.contains(YellowfinName)) || !isETLContext)
 							{
 								addField = true;
 							}
@@ -450,8 +469,17 @@ public class GoogleAnalytics extends AbstractDataSource {
 					
 					GaData result = null;
 					Object[][] data = null;
-					Boolean isTransformation = Boolean.valueOf((String)getAttribute("USEFORTRANSFORMATIONS"));
-					if(isTransformation)
+					boolean isETLContext = false;
+					
+					try {
+
+						isETLContext = isTransformationContext();
+
+					} catch (NoSuchMethodError e) {
+
+
+					}
+					if(isETLContext)
 					{
 						if (maxResults!=-1)
 						{
@@ -1219,6 +1247,11 @@ public class GoogleAnalytics extends AbstractDataSource {
 			log.error("No valid profile ID found");
 		}
 		return profileId;
+	}
+	
+	public boolean isTransformationCompatible()
+	{
+		return true;
 	}
 
 	
