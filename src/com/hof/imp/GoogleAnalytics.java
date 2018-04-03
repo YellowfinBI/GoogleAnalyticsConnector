@@ -1195,7 +1195,7 @@ public class GoogleAnalytics extends AbstractDataSource {
 				numberOfGoals = goals.getItems().size();	
 			}
 
-			Map<String, Integer> countDuplicatedColumnUINames = countDuplicatedColumnUINames(cols);
+			Map<String, Integer> countDuplicatedColumnUINames = countDuplicatedColumnUINames(cols, numberOfGoals);
 			String uiName = null;
 			String id = null;
 			String colstoSave="[";
@@ -1264,27 +1264,49 @@ public class GoogleAnalytics extends AbstractDataSource {
 	/**
 	 * Count the number of occurrences of each column's UI name
 	 * @param columns List of the Columns
-	 * @return
+	 * @param numberOfGoals Number of Goals
+	 * @return Map<String, Integer> Map storing number of occurrences of UI names
 	 */
-	private Map<String, Integer> countDuplicatedColumnUINames(List<Column> columns) {
+	private Map<String, Integer> countDuplicatedColumnUINames(List<Column> columns, int numberOfGoals) {
 		Map<String, Integer> columnUINamesCount = new HashMap<>();
 
 		//loop through all the columns
 		for (Column column: columns) {
 			String uiName = column.getAttributes().get("uiName");
-			Integer count = columnUINamesCount.get(uiName);
 
-			//if there are no occurences yet, set 1
-			if (count == null) {
-				columnUINamesCount.put(uiName, 1);
+			//Custom Dimension/Metrics, where XX refers to the number/index of the custom dimension/metric
+			if (uiName.contains("Goal XX ") && numberOfGoals > 0) {
+				//looping through number of goals and replace XX with the index
+				for (int c = 1; c <= numberOfGoals; c++) {
+					uiName = uiName.replace("XX", String.valueOf(c));
+
+					checkDuplicatedColumnUINames(columnUINamesCount, uiName);
+				}
 			}
-			else {//if there are already occurences, increment
-				count = count + 1;
-				columnUINamesCount.put(uiName, count);
+			else {
+				checkDuplicatedColumnUINames(columnUINamesCount, uiName);
 			}
 		}
 
 		return columnUINamesCount;
+	}
+
+	/**
+	 * Check if a column's UI name is duplicated
+	 * @param columnUINamesCount Map storing number of occurrences of UI names
+	 * @param uiName Current UI Name that needs to check
+	 */
+	private void checkDuplicatedColumnUINames(Map<String, Integer> columnUINamesCount, String uiName) {
+		Integer count = columnUINamesCount.get(uiName);
+
+		//if there are no occurences yet, set 1
+		if (count == null) {
+			columnUINamesCount.put(uiName, 1);
+		}
+		else {//if there are already occurences, increment
+			count = count + 1;
+			columnUINamesCount.put(uiName, count);
+		}
 	}
 
 	private String getFirstProfileId() throws IOException {
