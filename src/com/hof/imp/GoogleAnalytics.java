@@ -7,7 +7,10 @@ import java.sql.Date;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
 
@@ -1191,10 +1194,13 @@ public class GoogleAnalytics extends AbstractDataSource {
 				com.google.api.services.analytics.model.Goals goals = getAnalytics().management().goals().list(accountId, webPropertyId, profileId).execute();
 				numberOfGoals = goals.getItems().size();	
 			}
-			
-			
+
+			Map<String, Integer> countDuplicatedColumnUINames = countDuplicatedColumnUINames(cols);
+			String uiName = null;
+			String id = null;
 			String colstoSave="[";
-			for ( Column col:cols)
+
+			for (Column col:cols)
 			{
 				JSONObject column=new JSONObject();
 				
@@ -1203,8 +1209,15 @@ public class GoogleAnalytics extends AbstractDataSource {
 					int c;
 					for (c=1; c<=numberOfGoals; c++)
 					{
-						String uiName=col.getAttributes().get("uiName").replace("XX", String.valueOf(c));
-						String id= col.getId().replace("XX", String.valueOf(c));
+						uiName=col.getAttributes().get("uiName").replace("XX", String.valueOf(c));
+						id= col.getId().replace("XX", String.valueOf(c));
+
+						//if there are more than 1 occurrences of this UI Name, append the technical name of the column
+						if (countDuplicatedColumnUINames.get(uiName) != null &&
+							countDuplicatedColumnUINames.get(uiName) > 1) {
+							uiName = uiName + " (" + id + ")";
+						}
+
 						column.put("uiName", uiName);
 						column.put("status", col.getAttributes().get("status"));
 						column.put("dataType", col.getAttributes().get("dataType"));
@@ -1215,7 +1228,16 @@ public class GoogleAnalytics extends AbstractDataSource {
 				}
 				else 
 				{
-					column.put("uiName", col.getAttributes().get("uiName"));
+					uiName = col.getAttributes().get("uiName");
+					id = col.getId();
+
+					//if there are more than 1 occurrences of this UI Name, append the technical name of the column
+					if (countDuplicatedColumnUINames.get(uiName) != null &&
+						countDuplicatedColumnUINames.get(uiName) > 1) {
+						uiName = uiName + " (" + id + ")";
+					}
+
+					column.put("uiName", uiName);
 					column.put("status", col.getAttributes().get("status"));
 					column.put("dataType", col.getAttributes().get("dataType"));
 					column.put("type", col.getAttributes().get("type"));
@@ -1237,7 +1259,34 @@ public class GoogleAnalytics extends AbstractDataSource {
 		}
 		
 		
-	}	
+	}
+
+	/**
+	 * Count the number of occurrences of each column's UI name
+	 * @param columns List of the Columns
+	 * @return
+	 */
+	private Map<String, Integer> countDuplicatedColumnUINames(List<Column> columns) {
+		Map<String, Integer> columnUINamesCount = new HashMap<>();
+
+		//loop through all the columns
+		for (Column column: columns) {
+			String uiName = column.getAttributes().get("uiName");
+			Integer count = columnUINamesCount.get(uiName);
+
+			//if there are no occurences yet, set 1
+			if (count == null) {
+				columnUINamesCount.put(uiName, 1);
+			}
+			else {//if there are already occurences, increment
+				count = count + 1;
+				columnUINamesCount.put(uiName, count);
+			}
+		}
+
+		return columnUINamesCount;
+	}
+
 	private String getFirstProfileId() throws IOException {
 		String profileId = null;
 
