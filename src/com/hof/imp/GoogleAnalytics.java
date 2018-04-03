@@ -541,7 +541,7 @@ public class GoogleAnalytics extends AbstractDataSource {
 					{
 						result=get.execute();
 						
-						if (result.getRows()==null && result.getRows().size()>0)
+						if (result == null || result.getRows() == null || result.getRows().isEmpty())
 						{
 							return null;							
 						}
