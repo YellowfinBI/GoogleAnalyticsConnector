@@ -1278,9 +1278,9 @@ public class GoogleAnalytics extends AbstractDataSource {
 			if (uiName.contains("Goal XX ") && numberOfGoals > 0) {
 				//looping through number of goals and replace XX with the index
 				for (int c = 1; c <= numberOfGoals; c++) {
-					uiName = uiName.replace("XX", String.valueOf(c));
+					String uiNameWithIndex = uiName.replace("XX", String.valueOf(c));
 
-					checkDuplicatedColumnUINames(columnUINamesCount, uiName);
+					checkDuplicatedColumnUINames(columnUINamesCount, uiNameWithIndex);
 				}
 			}
 			else {
