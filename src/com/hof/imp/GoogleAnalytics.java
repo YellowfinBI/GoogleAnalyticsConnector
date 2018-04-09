@@ -30,6 +30,7 @@ import com.google.api.services.analytics.model.GaData;
 import com.google.api.services.analytics.model.GaData.ColumnHeaders;
 import com.google.api.services.analytics.model.Profile;
 import com.google.api.services.analytics.model.Profiles;
+import com.google.api.services.analytics.model.Goals;
 import com.hof.data.SessionBean;
 import com.hof.jdbc.metadata.GoogleAnalyticsMetaData;
 import com.hof.mi.thirdparty.interfaces.AbstractDataSet;
@@ -60,7 +61,15 @@ public class GoogleAnalytics extends AbstractDataSource {
 	
 	private JDBCMetaData sourceMetadata = null;
 	private final static Logger log = Logger.getLogger(GoogleAnalytics.class);
-	
+
+	protected final static String UI_NAME_KEY = "uiName";
+	protected final static String STATUS_KEY = "status";
+	protected final static String DATA_TYPE_KEY = "dataType";
+	protected final static String TYPE_KEY = "type";
+	protected final static String ID_KEY = "id";
+	protected final static String PROFILE_ID_KEY = "PROFILEID";
+	protected final static String ALL_COLUMNS_METADATA_KEY = "ALLCOLUMNSMETADATA";
+
 	public GoogleAnalytics() {
 		
 	}
@@ -934,7 +943,7 @@ public class GoogleAnalytics extends AbstractDataSource {
 	 * If the analytics has been set previously, just returns it,
 	 * otherwise sets it using the google api. 
 	 * */
-	private Analytics getAnalytics(){
+	protected Analytics getAnalytics(){
 		//if (analytics != null) return analytics;
 		
 		String pAddr=null;;
@@ -1046,6 +1055,7 @@ public class GoogleAnalytics extends AbstractDataSource {
 	public boolean autoRun()
 	{
 		cacheAllColumns();
+
 		if (loadBlob("LASTRUN")!=null)
 		{
 			java.util.Date curDt=new java.util.Date();
@@ -1166,99 +1176,128 @@ public class GoogleAnalytics extends AbstractDataSource {
 		return cols;
 	}
 
-	private void cacheAllColumns() 
-	{
-		try 
-		{
-			List<Column> cols=getAnalytics().metadata().columns().list("ga").execute().getItems();
-			
+	/**
+	 * Get all the columns from GA connector and save a json array which stores all the columns details
+	 * into the database
+	 * @return JSONArray JSONArray object that is saved into the db
+	 */
+	protected JSONArray cacheAllColumns() {
+
+		JSONArray colsToSave = new JSONArray();
+
+		try {
+			Analytics analytics = getAnalytics();
+			List<Column> cols = getAllColumns(analytics);
+			Profiles pfls = getProfiles(analytics);
+
 			int numberOfGoals = 0;
-			
-			
-			Profiles pfls = getAnalytics().management().profiles().list("~all", "~all").execute();
 			String accountId = null;
 			String webPropertyId = null;
-			String profileId = (String) getAttribute("PROFILEID");
+			String profileId = (String) getAttributeObject(PROFILE_ID_KEY);
 			
-			for (Profile p:pfls.getItems()) 
-			{
-				if(p.getId().equals((String) getAttribute("PROFILEID")))
-				{
+			for (Profile p: pfls.getItems()) {
+				if (p.getId().equals((String) getAttributeObject(PROFILE_ID_KEY))) {
 					accountId = p.getAccountId();
 					webPropertyId = p.getWebPropertyId();
 				}
 			}
 			
-			if (accountId != null && webPropertyId != null)
-			{
-				com.google.api.services.analytics.model.Goals goals = getAnalytics().management().goals().list(accountId, webPropertyId, profileId).execute();
+			if (accountId != null && webPropertyId != null) {
+				Goals goals = getGoals(analytics, accountId, webPropertyId, profileId);
 				numberOfGoals = goals.getItems().size();	
 			}
 
-			Map<String, Integer> countDuplicatedColumnUINames = countDuplicatedColumnUINames(cols, numberOfGoals);
-			String uiName = null;
-			String id = null;
-			String colstoSave="[";
+			Map<String, Integer> columnUINameOcurrences = countDuplicatedColumnUINames(cols, numberOfGoals);
 
-			for (Column col:cols)
-			{
-				JSONObject column=new JSONObject();
-				
-				if (col.getAttributes().get("uiName").contains("Goal XX ") && numberOfGoals > 0)
-				{
-					int c;
-					for (c=1; c<=numberOfGoals; c++)
-					{
-						uiName=col.getAttributes().get("uiName").replace("XX", String.valueOf(c));
-						id= col.getId().replace("XX", String.valueOf(c));
+			for (Column col: cols) {
+				if (col.getAttributes().get(UI_NAME_KEY).contains("Goal XX ") && numberOfGoals > 0) {
+					for (int c = 1; c <= numberOfGoals; c++) {
+						String uiName = col.getAttributes().get(UI_NAME_KEY).replace("XX", String.valueOf(c));
+						String id = col.getId().replace("XX", String.valueOf(c));
 
 						//if there are more than 1 occurrences of this UI Name, append the technical name of the column
-						if (countDuplicatedColumnUINames.get(uiName) != null &&
-							countDuplicatedColumnUINames.get(uiName) > 1) {
+						if (columnUINameOcurrences.get(uiName) != null &&
+							columnUINameOcurrences.get(uiName) > 1) {
 							uiName = uiName + " (" + id + ")";
 						}
 
-						column.put("uiName", uiName);
-						column.put("status", col.getAttributes().get("status"));
-						column.put("dataType", col.getAttributes().get("dataType"));
-						column.put("type", col.getAttributes().get("type"));
-						column.put("id", id);
-						colstoSave=colstoSave+column+", ";
+						JSONObject column = new JSONObject();
+
+						column.put(UI_NAME_KEY, uiName);
+						column.put(STATUS_KEY, col.getAttributes().get(STATUS_KEY));
+						column.put(DATA_TYPE_KEY, col.getAttributes().get(DATA_TYPE_KEY));
+						column.put(TYPE_KEY, col.getAttributes().get(TYPE_KEY));
+						column.put(ID_KEY, id);
+
+						colsToSave.put(column);
 					}
 				}
-				else 
-				{
-					uiName = col.getAttributes().get("uiName");
-					id = col.getId();
+				else {
+					String uiName = col.getAttributes().get(UI_NAME_KEY);
+					String id = col.getId();
 
 					//if there are more than 1 occurrences of this UI Name, append the technical name of the column
-					if (countDuplicatedColumnUINames.get(uiName) != null &&
-						countDuplicatedColumnUINames.get(uiName) > 1) {
+					if (columnUINameOcurrences.get(uiName) != null &&
+						columnUINameOcurrences.get(uiName) > 1) {
 						uiName = uiName + " (" + id + ")";
 					}
 
-					column.put("uiName", uiName);
-					column.put("status", col.getAttributes().get("status"));
-					column.put("dataType", col.getAttributes().get("dataType"));
-					column.put("type", col.getAttributes().get("type"));
-					column.put("id", col.getId());
-					colstoSave=colstoSave+column+", ";
-				}			
-				
-				
+					JSONObject column = new JSONObject();
+
+					column.put(UI_NAME_KEY, uiName);
+					column.put(STATUS_KEY, col.getAttributes().get(STATUS_KEY));
+					column.put(DATA_TYPE_KEY, col.getAttributes().get(DATA_TYPE_KEY));
+					column.put(TYPE_KEY, col.getAttributes().get(TYPE_KEY));
+					column.put(ID_KEY, col.getId());
+
+					colsToSave.put(column);
+				}
 			}	
-			
-			colstoSave=colstoSave+"]";
-			
-			saveBlob("ALLCOLUMNSMETADATA", colstoSave.getBytes());
+
+			saveBlobData(ALL_COLUMNS_METADATA_KEY, colsToSave.toString().getBytes());
 		} 
-		
-		catch (IOException e) 
-		{
+		catch (IOException e) {
 			log.error("Error occurred when updating the list of columns");
 		}
 		
-		
+		return colsToSave;
+	}
+
+	protected Object getAttributeObject(String key) {
+		return getAttribute(key);
+	}
+	/**
+	 * Get all the columns of GA
+	 * @param analytics Analytics instance
+	 * @return List<Column> List of all columns of GA
+	 * @throws Exception
+	 */
+	protected List<Column> getAllColumns(Analytics analytics) throws IOException {
+		return analytics.metadata().columns().list("ga").execute().getItems();
+	}
+
+	/**
+	 * Get profiles of GA
+	 * @param analytics Analytics instance
+	 * @return Profiles of GA
+	 * @throws IOException
+	 */
+	protected Profiles getProfiles(Analytics analytics) throws IOException {
+		return analytics.management().profiles().list("~all", "~all").execute();
+	}
+
+	/**
+	 * Get goals of GA
+	 * @param analytics Analytics instance
+	 * @param accountId accountId
+	 * @param webPropertyId webPropertyId
+	 * @param profileId profileId
+	 * @return
+	 * @throws IOException
+	 */
+	protected Goals getGoals(Analytics analytics, String accountId, String webPropertyId, String profileId) throws IOException {
+		return analytics.management().goals().list(accountId, webPropertyId, profileId).execute();
+
 	}
 
 	/**
@@ -1325,12 +1364,28 @@ public class GoogleAnalytics extends AbstractDataSource {
 		return true;
 	}
 
-	
+	/**
+	 * Save blob data by calling parent method from AbstractDataSource
+	 * since it cannot be overriden (final method).
+	 *
+	 * Mainly used to mock data so it can be testable
+	 * @param key key of the document
+	 * @param data byte[] data
+	 * @return
+	 */
+	protected boolean saveBlobData(String key, byte[] data) {
+		return saveBlob(key, data);
+	}
 
-	
-	
-	
-	
-	
-	
+	/**
+	 * Load blob data by calling parent method from AbstractDataSource
+	 * since it cannot be overriden (final method).
+	 *
+	 * Mainly used to mock data so it can be testable
+	 * @param key key of the document
+	 * @return
+	 */
+	protected byte[] loadBlobData(String key) {
+		return loadBlob(key);
+	}
 }
