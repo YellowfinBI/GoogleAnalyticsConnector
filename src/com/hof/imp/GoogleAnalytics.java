@@ -1197,25 +1197,6 @@ public class GoogleAnalytics extends AbstractDataSource {
 				Goals goals = getGoals(analytics, accountId, webPropertyId, profileId);
 				numberOfGoals = goals.getItems().size();	
 			}
-			
-			String colstoSave="[";
-			for ( Column col:cols)
-			{
-				JSONObject column=new JSONObject();
-				
-				if (col.getAttributes().get("uiName").contains("Goal XX ") && numberOfGoals > 0)
-				{
-					int c;
-					for (c=1; c<=numberOfGoals; c++)
-					{
-						String uiName=col.getAttributes().get("uiName").replace("XX", String.valueOf(c));
-						String id= col.getId().replace("XX", String.valueOf(c));
-						column.put("uiName", uiName);
-						column.put("status", col.getAttributes().get("status"));
-						column.put("dataType", col.getAttributes().get("dataType"));
-						column.put("type", col.getAttributes().get("type"));
-						column.put("id", id);
-						colstoSave=colstoSave+column+", ";
 
 			Map<String, Integer> columnUINameOcurrences = countDuplicatedColumnUINames(cols, numberOfGoals);
 
@@ -1265,7 +1246,7 @@ public class GoogleAnalytics extends AbstractDataSource {
 					column.put(ID_KEY, col.getId());
 
 					colsToSave.put(column);
-				}				
+				}
 			}	
 
 			saveBlobData(ALL_COLUMNS_METADATA_KEY, colsToSave.toString().getBytes());
@@ -1276,6 +1257,7 @@ public class GoogleAnalytics extends AbstractDataSource {
 		
 		return colsToSave;
 	}
+
 
 	protected Object getAttributeObject(String key) {
 		return getAttribute(key);
