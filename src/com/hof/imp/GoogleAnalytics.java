@@ -1210,6 +1210,10 @@ public class GoogleAnalytics extends AbstractDataSource {
 			Map<String, Integer> columnUINameOcurrences = countDuplicatedColumnUINames(cols, numberOfGoals);
 
 			for (Column col: cols) {
+				if (col.getAttributes().get("status").equals("DEPRECATED")) {
+					continue;
+				}
+
 				if (col.getAttributes().get(UI_NAME_KEY).contains("Goal XX ") && numberOfGoals > 0) {
 					for (int c = 1; c <= numberOfGoals; c++) {
 						String uiName = col.getAttributes().get(UI_NAME_KEY).replace("XX", String.valueOf(c));
@@ -1311,6 +1315,10 @@ public class GoogleAnalytics extends AbstractDataSource {
 
 		//loop through all the columns
 		for (Column column: columns) {
+			if (column.getAttributes().get("status").equals("DEPRECATED")) {
+				continue;
+			}
+
 			String uiName = column.getAttributes().get("uiName");
 
 			//Custom Dimension/Metrics, where XX refers to the number/index of the custom dimension/metric
