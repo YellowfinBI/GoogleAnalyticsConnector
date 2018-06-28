@@ -214,7 +214,6 @@ public class GoogleAnalytics extends AbstractDataSource {
 			
 			@Override
 			public String getDataSetName() {
-				// TODO Auto-generated method stub
 				return "All Columns";
 			}
 			
@@ -316,13 +315,11 @@ public class GoogleAnalytics extends AbstractDataSource {
 			
 			@Override
 			public boolean getAllowsDuplicateColumns() {
-				// TODO Auto-generated method stub
 				return false;
 			}
 			
 			@Override
 			public boolean getAllowsAggregateColumns() {
-				// TODO Auto-generated method stub
 				return false;
 			}
 			
@@ -496,7 +493,9 @@ public class GoogleAnalytics extends AbstractDataSource {
 						if (maxResults!=-1)
 						{
 							//System.out.println("GA max results: "+maxResults);
-							get.setMaxResults(maxResults);
+							get = get.setMaxResults(maxResults);
+						} else {
+							get = get.setMaxResults(rowsLimit);
 						}
 						List<GaData> results = new ArrayList<GaData>();
 						result=get.execute();
@@ -548,9 +547,10 @@ public class GoogleAnalytics extends AbstractDataSource {
 					}
 					else
 					{
+						get = get.setMaxResults(rowsLimit);
 						result=get.execute();
 						
-						if (result == null || result.getRows() == null || result.getRows().isEmpty())
+						if (result.getRows()==null && result.getRows().size()>0)
 						{
 							return null;							
 						}
@@ -561,7 +561,6 @@ public class GoogleAnalytics extends AbstractDataSource {
 					
 					
 					return data;
-					//data=buildResultset(result, columns);
 				}
 				
 				catch(com.google.api.client.googleapis.json.GoogleJsonResponseException e)
@@ -683,7 +682,6 @@ public class GoogleAnalytics extends AbstractDataSource {
 			}
 			private String compileFilters(List<FilterData> filters, HashMap<String, String> metricsHash, HashMap<String, String> dimensionsHash) 
 			{
-				// TODO Auto-generated method stub
 				String request="";
 				
 				for (FilterData flt:filters)
@@ -764,7 +762,6 @@ public class GoogleAnalytics extends AbstractDataSource {
 			
 			private String getOperator(Object filterOperator, boolean isMetrics) 
 			{
-				// TODO Auto-generated method stub
 				if (isMetrics)
 				{
 					if (filterOperator.equals(FilterOperator.EQUAL))
@@ -882,14 +879,12 @@ public class GoogleAnalytics extends AbstractDataSource {
 		try {
 			kf = KeyFactory.getInstance("RSA");
 		} catch (NoSuchAlgorithmException e2) {
-			// TODO Auto-generated catch block
 			e2.printStackTrace();
 		}
 		PrivateKey privKey = null;
 		try {
 			privKey = kf.generatePrivate(keySpec);
 		} catch (InvalidKeySpecException e2) {
-			// TODO Auto-generated catch block
 			this.error = new IOException("Invalid Private Key.");
 			e2.printStackTrace();
 			credential = null;
@@ -959,7 +954,6 @@ public class GoogleAnalytics extends AbstractDataSource {
 		pPort = oc.getOrgParm(ipOrg, Const.C_OUTGOINGPROXYPORT);
 		
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		if (pAddr!=null && pPort!=null)
@@ -996,7 +990,6 @@ public class GoogleAnalytics extends AbstractDataSource {
 			pPort = oc.getOrgParm(ipOrg, Const.C_OUTGOINGPROXYPORT);
 			
 			} catch (Exception e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 			if (pAddr!=null && pPort!=null)
@@ -1055,7 +1048,6 @@ public class GoogleAnalytics extends AbstractDataSource {
 	public boolean autoRun()
 	{
 		cacheAllColumns();
-
 		if (loadBlob("LASTRUN")!=null)
 		{
 			java.util.Date curDt=new java.util.Date();
@@ -1078,7 +1070,6 @@ public class GoogleAnalytics extends AbstractDataSource {
 				pPort = oc.getOrgParm(ipOrg, Const.C_OUTGOINGPROXYPORT);
 				
 				} catch (Exception e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 				if (pAddr!=null && pPort!=null)
@@ -1266,6 +1257,7 @@ public class GoogleAnalytics extends AbstractDataSource {
 		
 		return colsToSave;
 	}
+
 
 	protected Object getAttributeObject(String key) {
 		return getAttribute(key);
